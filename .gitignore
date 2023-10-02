@@ -1,0 +1,7 @@
+*.idea
+db.sqlite3
+*/migrations
+*/__pycache__
+/venv/
+bin
+lib
