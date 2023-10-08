@@ -2,10 +2,8 @@ version: '3'
 
 services:
   web:
-    image: python:3.11
-    command: sh -c "python src/manage.py collectstatic --noinput && python src/manage.py migrate && gunicorn project_name.wsgi:application -b 0.0.0.0:8000"
-    volumes:
-      - ./quiz-sut:/app
+    build:
+      './src'
     ports:
       - "8000:8000"
     environment:
@@ -21,18 +19,9 @@ services:
     expose:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=foo
-
-
-  tailwindcss:
-    image: node:14
-    command: sh -c "cd /app && npm install && npm run build"
-    volumes:
-      - ./quiz-sut:/app
-    depends_on:
-      - web
+      - POSTGRES_USER=quiz_db
+      - POSTGRES_PASSWORD=quiz_user
+      - POSTGRES_DB=your_password
 
 volumes:
   postgres_data:
