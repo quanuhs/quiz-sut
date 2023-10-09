@@ -1,6 +1,6 @@
 *.idea
 db.sqlite3
-*/migrations
+/src/*/migrations/
 */__pycache__
 /venv/
 bin
