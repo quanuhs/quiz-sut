@@ -29,10 +29,10 @@ ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
-
 INSTALLED_APPS = [
 
     'channels',
+    'daphne',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -40,9 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    'apps.game'   
+    
+    'game',
+    'quiz',
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
