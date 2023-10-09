@@ -40,11 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # 'quiz.apps.QuizConfig',
     
     'game',
     'quiz',
 ]
 
+AUTH_USER_MODEL = 'quiz.CustomUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
