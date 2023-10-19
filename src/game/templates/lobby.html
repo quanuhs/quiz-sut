@@ -9,7 +9,7 @@
     <h1>Hello World</h1>
 
     <script>
-        let url = `ws://${window.location.host}/ws/socket-server/`
+        let url = `ws://${window.location.host}/ws/socket-server/{{game_code}}/`
         const gameSocket = new WebSocket(url)
         gameSocket.onmessage = websocketMessageEvent
 
