@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    {% if user.is_authenticated %}
+    <a href="{% url 'create' module.id %}">Создать тест!</a>
+    {% endif %}
+
+    <label>Все карточки:</label>
+    <ul>
+    {% for card in module.cards.all %}
+    <li>
+        <input id="{{card.id}}_front" value="{{card.front_text}}" readonly><button>O<</button>
+        <input id="{{card.id}}_back" value="{{card.back_text}}" readonly><button>O<</button>
+    </li>
+    {% endfor %}
+
+{% endblock %}

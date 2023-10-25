@@ -20,7 +20,10 @@ application = ProtocolTypeRouter({
     'http': get_asgi_application(),
     'websocket': AuthMiddlewareStack(
         URLRouter(
-            game_routing.websocket_urlpatterns
+            
+            [
+                *game_routing.websocket_urlpatterns,
+            ]
         )
     )
 })

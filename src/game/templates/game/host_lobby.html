@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <h1>Вы - создатель лобби. Нажмите на кнопку начать</h1>
+    <h2>Код для подключения: <b>{{lobby.code}}</b></h2>
+    <h2>Ссылка для подключения: <a href="{% url 'play' lobby.uuid.hex %}">ссылка</a></h2>
+    <button onclick="start_game()">Начать</button>
+
+    <script>
+        let url = `ws://${window.location.host}/game/admin/{{lobby.secret}}/`
+        const gameSocket = new WebSocket(url)
+        gameSocket.onmessage = websocketMessageEvent
+
+        async function websocketMessageEvent(event){
+            let data = JSON.parse(event.data)
+            console.log(data)
+        }
+
+
+        async function start_game(){
+            console.log("send")
+            gameSocket.send(JSON.stringify({"command": "start"}))
+        }
+
+    </script>
+    
+{% endblock %}

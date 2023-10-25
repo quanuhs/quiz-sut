@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h1>Добро пожаловать! Ожидаем начала..</h1>
+
+    <script>
+        let url = `ws://${window.location.host}/game/player/{{lobby.uuid.hex}}/`
+        const gameSocket = new WebSocket(url)
+        gameSocket.onmessage = websocketMessageEvent
+
+        async function websocketMessageEvent(event){
+            let data = JSON.parse(event.data)
+            console.log(data)
+
+            switch(data.command){
+                case "start":
+                    console.log("START")
+                    break;
+                
+                case "left":
+                    console.log("LEFT")
+                    break;
+                
+                case "joined":
+                    console.log("joined")
+                    break;
+            
+            }
+        }
+    </script>
+{% endblock %}

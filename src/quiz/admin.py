@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Topic, Module, Card
 
+class CardInline(admin.TabularInline):
+    model = Card
+    extra = 1
+    
+
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -29,6 +34,7 @@ class ModuleAdmin(admin.ModelAdmin):
     list_filter = ("author__username", "created_at")
     date_hierarchy = "created_at"
     ordering = ["-created_at"]
+    inlines = [CardInline]
 
 
 @admin.register(Card)

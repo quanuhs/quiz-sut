@@ -3,5 +3,8 @@ from . import views
 from .tools import get_code_regex
 
 urlpatterns = [
-    re_path(f'play/{get_code_regex()}', views.test)
+    path("play/<lobby_id>", views.lobby_page, name="play"),
+    path("play/create/<module_id>", views.create_game, name="create"),
+    path("host/", views.host_lobby_page, name="host"),
+    path("play/", views.join_game, name="join")
 ]
