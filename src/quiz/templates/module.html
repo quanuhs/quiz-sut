@@ -1,17 +1,87 @@
 {% extends 'base.html' %}
 {% block content %}
 
-    {% if user.is_authenticated %}
-    <a href="{% url 'create' module.id %}">Создать тест!</a>
-    {% endif %}
+    <div class="grid gap-4 items-center bg-white dark:bg-gray-800 p-4 mb-4 shadow-md rounded-lg">
 
-    <label>Все карточки:</label>
-    <ul>
-    {% for card in module.cards.all %}
-    <li>
-        <input id="{{card.id}}_front" value="{{card.front_text}}" readonly><button>O<</button>
-        <input id="{{card.id}}_back" value="{{card.back_text}}" readonly><button>O<</button>
-    </li>
-    {% endfor %}
+        <div class="flex flex-wrap items-center gap-4 text-center">
+            
+            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="{% url 'create' module.id %}">Играть</a>
+            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="">Заучивание</a>
+            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="">Подбор</a>
+
+        </div>
+        
+        {% if module.author == user %}
+        <div class="flex items-center gap-4 text-center">
+            <a class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-center" href="{% url 'edit_module' module.id %}">
+                Редактировать
+            </a>
+
+        </div>
+        {% endif %}
+    </div>
+
+
+    <div class="bg-white dark:bg-gray-800 p-4 mb-4 shadow-md rounded-lg dark:text-white">
+        <figcaption class="flex justify-left items-center space-x-3">
+            <a class="flex items-center space-x-3" href="{% url 'author' module.author.id %}">
+            <img class="w-9 h-9 rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/karen-nelson.png" alt="profile picture">
+            <div class="space-y-0.5 font-medium dark:text-white text-left">
+                <div>{{module.author.username}}</div>
+                <div class="text-sm font-light text-gray-500 dark:text-gray-400">Создатель модуля</div>
+            </div>
+            </a>
+        </figcaption>
+    </div>
+
+
+    <div class="grid md:grid-cols-2  gap-4">
+        {% for card in module.cards.all %}
+        <div class="bg-white dark:bg-gray-800 p-4 shadow-md rounded-lg dark:text-white">
+            <h2 class="text-2xl font-bold mb-2 cursor-pointer inline-block hover:text-orange-400" onclick="voiceOver(this)">{{card.back_text}}</h2>
+            <br>
+            <p class="text-lg text-gray-800 dark:text-gray-400 cursor-pointer inline-block hover:text-orange-300 whitespace-normal"  onclick="voiceOver(this)">{{card.front_text}}</p>
+        </div>
+        
+        {% endfor %}
+
+    </div>
+
+
+    <script>
+        let text_to_speach = new SpeechSynthesisUtterance();
+        let s = setSpeech()
+        s.then((voices) => {text_to_speach.voice = voices[8];})
+
+        function setSpeech() {
+            return new Promise(
+                function (resolve, reject) {
+                    let synth = window.speechSynthesis;
+                    let id;
+
+                    id = setInterval(() => {
+                        if (synth.getVoices().length !== 0) {
+                            resolve(synth.getVoices());
+                            clearInterval(id);
+                        }
+                    }, 10);
+                }
+            )
+        }
+
+
+
+        async function voiceOver(element){
+            speechSynthesis.cancel()
+            if (element.innerText.length > 30)
+                return
+
+            text_to_speach.text = element.innerText;
+            window.speechSynthesis.speak(text_to_speach);
+
+        }
+
+    </script>
+
 
 {% endblock %}
