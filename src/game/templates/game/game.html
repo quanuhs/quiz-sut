@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+<div class="w-full" id="game">
+
+    <div class="w-full bg-blue-500 h-4 mb-4 flex">
+        <div v-for="_answer in answers" class="h-full transition duration-150 ease-in-out" :class="{'bg-green-500': _answer, 'bg-red-500': !_answer}" :style="{width: progress+'%'}"></div>
+    </div>
+
+    <div class="text-center text-6xl font-semibold mb-10">
+        <span id="timer" class="text-green-500"></span>
+    </div>
+
+
+    <div class="bg-white dark:bg-gray-800 p-6 mb-6 shadow-md rounded-lg dark:text-white">
+        <h2 class="text-2xl font-semibold mb-2">Question /question_index+1/:</h2>
+        <p class="text-lg">/questions[question_index].title/</p>
+    </div>
+
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button v-for="title, index in questions[question_index].answers" 
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold p-5 rounded text-center" 
+        :class="{'bg-red-500 hover:bg-red-500': (correct_answer!=index && correct_answer >= 0), 'bg-green-500 hover:bg-green-500': correct_answer==index, 'bg-orange-500 hover:bg-orange-500': (answer_index==index && correct_answer == -1)}" @click="choose_answer(index)">/title/</button>
+    </div>
+
+</div>
+
+
+<style>
+    .progress-item {
+      display: inline-block;
+      width: 10%;
+      height: 100%;
+      transition: background-color 0.3s;
+    }
+
+</style>
+
+
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    
+
+<script>
+    const { createApp, ref } = Vue
+
+    const app = createApp({
+        setup() {
+        var questions = ref({{quiz_data | safe}});
+        var answers = ref([])
+        
+        var correct_answer = ref(-1)
+        var questions_answered = ref({{player.word_index}});
+        var answer_index = ref(-1);
+
+
+        return {
+            questions,
+            questions_answered,
+            answer_index,
+            correct_answer,
+            answers,
+
+
+        }
+        },
+
+        delimiters: ['/', '/'],
+
+        computed: {
+            progress() {
+                return Math.round(((1) / this.max_questions) * 100);
+            },
+
+            max_questions(){
+                return Object.keys(this.questions).length
+            },
+
+            question_index(){
+
+                if (this.questions_answered >= this.max_questions){
+                    return this.max_questions - 1
+                }
+            
+                return this.questions_answered
+            }
+        },
+        methods: {
+            choose_answer(index){
+                this.answer_index = index
+                submit_answer()
+            },
+
+            next_question(){
+                this.questions_answered += 1
+                this.answer_index = -1
+                this.correct_answer = -1
+            }
+        
+        }
+    }).mount('#game')
+
+</script>
+
+
+<script>
+    // Timer logic (adjust the time as needed)
+    var max_time = 5;
+    var time = max_time;
+
+    let t8 = tl(80)
+    let t5 = tl(50)
+    let t2 = tl(20)
+
+
+    const timerElement = document.getElementById('timer');
+
+    function tl(percentage){
+        return time * percentage / 100
+    }
+
+    function updateTimer() {
+        timerElement.textContent = time;
+
+        // Adjust timer color based on time left
+        if (time >= t8) {
+            timerElement.classList.remove('text-yellow-500', 'text-orange-500', 'text-red-500');
+            timerElement.classList.add('text-green-500');
+        } else if (time >= t5) {
+            timerElement.classList.remove('text-green-500', 'text-orange-500', 'text-red-500');
+            timerElement.classList.add('text-yellow-500');
+        } else if (time >= t2) {
+            timerElement.classList.remove('text-green-500', 'text-yellow-500', 'text-red-500');
+            timerElement.classList.add('text-orange-500');
+        } else {
+            timerElement.classList.remove('text-green-500', 'text-yellow-500', 'text-orange-500');
+            timerElement.classList.add('text-red-500');
+        }
+        if (time > 0) {
+            time--;
+
+        } else {
+            // Handle time up logic here
+            submit_answer()
+            clearInterval(timerInterval)
+        }
+    }
+
+
+    function reset_timer(){
+        
+        time = max_time
+        updateTimer()
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+
+
+    function submit_answer(){
+        ws_send("ready", {"question": app.question_index, "answer": app.answer_index})
+        
+        // if (app.questions_answered < app.max_questions){
+        //             app.next_question()
+
+        //             if (max_time != 0)
+        //                 reset_timer()
+        // }
+                
+        // if (app.questions_answered == app.max_questions){
+        //     console.log("HERE WE GO!")
+        //     clearInterval(timerInterval)
+
+        // }
+
+    }
+
+
+</script>
+
+    <script>
+        let url = `ws://${window.location.host}/game/player/{{lobby.uuid.hex}}/`
+        const gameSocket = new WebSocket(url)
+        gameSocket.onmessage = websocketMessageEvent
+
+        gameSocket.onclose = (event) => {
+            console.log(event)
+            window.location.reload()
+        };
+
+
+        function ws_send(command, message){
+            gameSocket.send(JSON.stringify({"command": command, "message": message}))
+        }
+
+        async function websocketMessageEvent(event){
+            let data = JSON.parse(event.data)
+            switch(data.command){
+                case 'correct':
+                    app.correct_answer = data["answer"]
+                    app.answers.push(app.answer_index == data["answer"])
+                    break;
+                
+                case 'next':
+                    app.next_question()
+                    break;
+
+                default:
+                    console.log(data)
+            }
+            
+        }
+    </script>
+
+
+{% endblock %}

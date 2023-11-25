@@ -38,9 +38,9 @@
     <div class="grid md:grid-cols-2  gap-4">
         {% for card in module.cards.all %}
         <div class="bg-white dark:bg-gray-800 p-4 shadow-md rounded-lg dark:text-white">
-            <h2 class="text-2xl font-bold mb-2 cursor-pointer inline-block hover:text-orange-400" onclick="voiceOver(this)">{{card.back_text}}</h2>
+            <h2 class="text-2xl font-bold mb-2 cursor-pointer inline-block hover:text-orange-400" onclick="voiceOver(this)">{{card.front_text}}</h2>
             <br>
-            <p class="text-lg text-gray-800 dark:text-gray-400 cursor-pointer inline-block hover:text-orange-300 whitespace-normal"  onclick="voiceOver(this)">{{card.front_text}}</p>
+            <p class="text-lg text-gray-800 dark:text-gray-400 cursor-pointer inline-block hover:text-orange-300 whitespace-normal"  onclick="voiceOver(this)">{{card.back_text}}</p>
         </div>
         
         {% endfor %}
@@ -51,7 +51,11 @@
     <script>
         let text_to_speach = new SpeechSynthesisUtterance();
         let s = setSpeech()
-        s.then((voices) => {text_to_speach.voice = voices[8];})
+        s.then((voices) => {
+            text_to_speach.voice = voices[voices.findLastIndex((voice) => voice.lang === 'en-GB' || voice.lang === 'en_GB')]
+
+        
+        })
 
         function setSpeech() {
             return new Promise(
@@ -73,9 +77,10 @@
 
         async function voiceOver(element){
             speechSynthesis.cancel()
-            if (element.innerText.length > 30)
+            if (element.innerText.length >= 100)
                 return
 
+            console.log(window.speechSynthesis.getVoices())
             text_to_speach.text = element.innerText;
             window.speechSynthesis.speak(text_to_speach);
 

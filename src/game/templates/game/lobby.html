@@ -1,30 +1,92 @@
 {% extends 'base.html' %}
 {% block content %}
-    <h1>Добро пожаловать! Ожидаем начала..</h1>
+
+
+<div id="lobby">
+
+    <h1 class="text-3xl mb-2 font-bold dark:text-white max-w-md mx-auto py-8 text-center">Добро пожаловать,</br>[[userNickname]]!</br></h1>
+    <h2 class="text-2xl font-bold mb-6 dark:text-gray-400 max-w-md mx-auto py-8 text-center">Ожидаем начала игры</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-wrap justify-between items-center">
+        <figcaption v-for="player, player_id in players" class="flex grow justify-left items-center space-x-3 relative border-2 border-gray-200 rounded-lg p-2 hover:bg-gray-800 cursor-pointer">
+            <img :src="avatars_link+player_id" class="w-16 h-16 rounded-full" alt="profile picture">
+            <div class="space-y-0.5 font-medium dark:text-white text-left">
+                <div>[[player.name]]</div>
+                <div class="text-sm font-light text-gray-500 dark:text-gray-400">
+                    <span v-if="player.is_auth">Авторизованный пользователь</span>
+                    <span v-else>Анонимный пользователь</span>
+                </div>
+            </div>
+        </figcaption>
+
+    </div>
+
+</div>
+
+
+
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+<script>
+    const { createApp, ref } = Vue
+
+    const lobby = createApp({
+        setup() {
+            var userNickname = ref("{{player.name}}")
+            var players = ref({})
+            var avatars_link = "https://api.dicebear.com/7.x/bottts/svg?seed="
+            
+            var waiting_to_start = ref(true)
+        
+        return {
+            players,
+            avatars_link,
+            userNickname,
+            waiting_to_start,
+        }
+        },
+        delimiters: ['[[', ']]'],
+
+        methods: {
+            add_player (id, name, auth) {
+                this.players[id] = {"name": name, "is_auth": auth}
+            },
+
+        }
+    }).mount('#lobby')
+    </script>
+
 
     <script>
         let url = `ws://${window.location.host}/game/player/{{lobby.uuid.hex}}/`
         const gameSocket = new WebSocket(url)
         gameSocket.onmessage = websocketMessageEvent
 
+        gameSocket.onclose = (event) => {
+            console.log(event)
+            window.location.reload()
+        };
+
+
         async function websocketMessageEvent(event){
             let data = JSON.parse(event.data)
-            console.log(data)
-
             switch(data.command){
+                case 'join':
+                    lobby.add_player(data["message"]["id"], data["message"]["name"], false)
+                    break;
+                case 'left':
+                    delete lobby.players[data["message"]["id"]]
+                    break;
                 case "start":
-                    console.log("START")
-                    break;
-                
-                case "left":
-                    console.log("LEFT")
-                    break;
-                
-                case "joined":
-                    console.log("joined")
-                    break;
-            
+                    window.location.reload()
+
+                default:
+                    console.log(data)
             }
+            
         }
     </script>
+
+
 {% endblock %}

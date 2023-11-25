@@ -6,5 +6,5 @@ urlpatterns = [
     path("play/<lobby_id>", views.lobby_page, name="play"),
     path("play/create/<module_id>", views.create_game, name="create"),
     path("host/", views.host_lobby_page, name="host"),
-    path("play/", views.join_game, name="join")
+    path("play/", views.join_game, name="join"),
 ]

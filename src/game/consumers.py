@@ -1,34 +1,81 @@
 import json
 from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
 
-from game.models import Lobby
-
+from game.models import Lobby, LobbyPlayer
+from asgiref.sync import sync_to_async
+import asyncio
 
 
 # Игрок
 class GamePlayerConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
+        self.user = self.scope["user"]
         await self.check_code(self.scope["url_route"]["kwargs"].get("lobby_id"))
     
     
     async def receive_json(self, content, **kwargs):
-        pass
+        match content.get("command"):
+            case "ready":
+                question_index = content.get("message").get("question")
+                answer_index = content.get("message").get("answer")
+
+                if self.player.word_index > question_index:
+                    return
+
+                if self.scope["session"].get("correct_answers")[question_index] == answer_index:
+                    self.player.points += 1
+                
+                self.player.word_index += 1
+                await self.player.asave()
+
+                await self.send_json({"command": "correct", "answer": self.scope["session"].get("correct_answers")[question_index]})
+                # УБРАТЬ!
+                await asyncio.sleep(1.5)
+                await self.send_json({"command": "next"})
     
-    
-    async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        pass
     
     
     async def disconnect(self, code):
+        if code == 1:
+            await self.close()
+        
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-
+        await self.channel_layer.group_send(self.room_group_name, {"type": "left", "message": {"id": self.player.player_id.hex}})
+        await self.channel_layer.group_send("host"+self.room_group_name, {"type": "left", "message": {"id": self.player.player_id.hex}})
+        await self.close()
+        
 
     async def chat_message(self, event):
         message = event["message"]
 
         # Send message to WebSocket
         await self.send_json({"message": message})
+
+
+    async def joined(self, event):
+        if event["message"].get("to") is None:
+            await self.send_json({"command": "join", "message": event["message"]})
+            await self.channel_layer.group_send(self.room_group_name, {"type": "joined", "message": {"id": self.player.player_id.hex, "name": self.player.name, "to": event["message"]["id"]}})
+        
+        elif event["message"].get("to") == self.player.player_id.hex:
+            await self.send_json({"command": "join", "message": event["message"]})
+
+    async def left(self, event):
+        if event["message"]["id"] == self.player.player_id:
+            return
+        
+        await self.send_json({"command": "left", "message": event["message"]})
+
+
+    async def start(self, event):
+        await self.send_json({"command": "start", "message": event["message"]})
+    
+
+    async def remove(self, event):
+        if event["id"] == self.player.player_id.hex:
+            await self.player.adelete()
+            await self.disconnect(1000)
 
 
     async def check_code(self, join_code):
@@ -38,14 +85,33 @@ class GamePlayerConsumer(AsyncJsonWebsocketConsumer):
         if lobby is None:
             self.close()
             return
-    
 
+        self.lobby = lobby
+        
+        player_id = self.scope["session"].get("player_id")
+
+        if player_id is None:
+            await self.close()
+            return
+
+        player = await LobbyPlayer.objects.filter(player_id = player_id, lobby = lobby).afirst()
+        if player is None:
+            await self.close()
+            return
+        
+        self.player = player
 
 
         await self.accept()
-        self.room_group_name = f"p_game_{lobby.id}"
+
+        self.room_group_name = f"game_{lobby.id}"
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-        # await self.channel_layer.group_send(self.room_group_name, {"type": "chat_message", "message": {"LobbyID": self.lobby.id, "UUID": self.lobby.uuid.hex}})
+        await self.channel_layer.group_send(self.room_group_name, {"type": "joined", "message": {"id": self.player.player_id.hex, "name": self.player.name}})
+        await self.channel_layer.group_send("host"+self.room_group_name, {"type": "joined", "message": {"id": self.player.player_id.hex, "name": self.player.name}})
+
+
+
+
 
 
 
@@ -53,31 +119,54 @@ class GamePlayerConsumer(AsyncJsonWebsocketConsumer):
 # Администратор / создатель игры
 class GameAdminConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
+        self.user = self.scope["user"]
         await self.check_id(self.scope["url_route"]["kwargs"].get("secret_id"))
 
         # await self.accept()
-    
+
 
     async def receive_json(self, content, **kwargs):
-        if content.get("command") == "start":
-            await self.send_json({"hello": "world"})
+        match content.get("command"):
+            case "start":
+                self.lobby.in_play = True
+                await self.lobby.asave()
+                await self.channel_layer.group_send(self.room_group_name, {"type": "start", "message": {}})
+
+            case "remove":
+                await self.channel_layer.group_send(self.room_group_name, {"type": "remove", "id": content.get("id")})
+
+            case "change_code":
+                await sync_to_async(self.lobby.generate_code)()
+                await self.lobby.asave()
+                await self.send_json({"command": "new_code", "code": self.lobby.code})
         
     
     
     async def disconnect(self, code):
-        pass
+        await self.channel_layer.group_send(self.room_group_name, {"type": "disconnect", "code": 1})
+        await self.lobby.adelete()
+        await self.close()
 
 
-    async def check_id(self, secret_id):
+    async def joined(self, event):
+        await self.send_json({"command": "join", "message": event["message"]})
+    
+    
+    async def left(self, event):
+        await self.send_json({"command": "left", "message": event["message"]})
 
-        lobby = await Lobby.objects.filter(secret=secret_id).afirst()
+
+
+    async def check_id(self, secret_id):        
+        lobby = await Lobby.objects.filter(admin=self.user).afirst()
         # Проверяем, если пользователь - создатель
         if lobby is None:
             self.close()
             return
     
         await self.accept()
-        self.room_group_name = f"a_game_{lobby.id}"
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        self.lobby = lobby
+        self.room_group_name = f"game_{lobby.id}"
+        await self.channel_layer.group_add("host"+self.room_group_name, self.channel_name)
 
         # await self.send_json({"hello": "world"})

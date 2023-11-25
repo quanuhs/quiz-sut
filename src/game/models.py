@@ -18,16 +18,23 @@ def generate_code(length=5, attempts=10):
 
 
 class Lobby(models.Model):
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=False)
+    admin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=False)
     secret = models.UUIDField(default = uuid.uuid4, blank=False, null=False)
     is_open = models.BooleanField(default=True, null=False)
+    in_play = models.BooleanField(default=False, null=False)
+    
     uuid = models.UUIDField(default = uuid.uuid4, blank=False, null=False)
     code = models.CharField(max_length=5, default=generate_code, unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, null=False)
-    
+    random_seed = models.IntegerField(default=random.randint(0, 1000000), blank=False, null=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+
+    def generate_code(self):
+        self.code = generate_code()
+
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -37,6 +44,17 @@ class Lobby(models.Model):
     def __str__(self):
         return self.code
 
+
+class LobbyPlayer(models.Model):
+    player_id = models.UUIDField(default=uuid.uuid4, blank=False, null=False)
+    name = models.CharField(max_length=30, default="unkown_user")
+    lobby = models.ForeignKey(Lobby, on_delete=models.CASCADE, related_name="players")
+
+    random_seed = models.IntegerField(default=random.randint(0, 1000000), blank=False, null=False)
+    word_index = models.IntegerField(default=0, blank=False, null=False)
+    points = models.IntegerField(default=0, blank=False, null=False)
+
+    # Возможно стоит записывать IP и/или последний момент выхода из лобби, чтобы отчищать
 
 
 class LobbySettings(models.Model):
