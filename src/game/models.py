@@ -26,7 +26,6 @@ class Lobby(models.Model):
     uuid = models.UUIDField(default = uuid.uuid4, blank=False, null=False)
     code = models.CharField(max_length=5, default=generate_code, unique=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, null=False)
-    random_seed = models.IntegerField(default=random.randint(0, 1000000), blank=False, null=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -50,7 +49,6 @@ class LobbyPlayer(models.Model):
     name = models.CharField(max_length=30, default="unkown_user")
     lobby = models.ForeignKey(Lobby, on_delete=models.CASCADE, related_name="players")
 
-    random_seed = models.IntegerField(default=random.randint(0, 1000000), blank=False, null=False)
     word_index = models.IntegerField(default=0, blank=False, null=False)
     points = models.IntegerField(default=0, blank=False, null=False)
 

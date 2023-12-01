@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+<div class="w-full" id="game">
+    <div v-if="!show_results" class="grid grid-cols-2 gap-4">
+
+        <div v-for="card in cards" class="p-4 bg-gray-200 rounded-md">
+            <p class="text-lg font-semibold mb-2">/card.title/</p>
+            <div class="bg-blue-500 text-white px-4 py-2 rounded-md">Definition 1</div>
+        </div>
+        
+    </div>
+
+
+    <div v-else>
+        
+
+        <a href="{% url 'module' module.id%}" class="text-center w-full flex-shrink-0 inline-flex items-center justify-center px-5 py-3 text-base font-bold text-white bg-blue-500 hover:bg-blue-700 rounded-lg">Вернуться к модулю</a>
+    </div>
+
+</div>
+
+
+
+
+<style>
+    .progress-item {
+      display: inline-block;
+      width: 10%;
+      height: 100%;
+      transition: background-color 0.3s;
+    }
+
+</style>
+
+
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+
+<script>
+    const { createApp, ref } = Vue
+
+    const app = createApp({
+        setup() {
+
+
+        var cards = {{cards | safe}};
+        var questions = ref([{"title": ""}]);
+        
+        var questions_answered = ref(0);
+        var answer_index = ref(-1);
+
+        var answers = ref([])
+        var correct_answers = ref([])
+
+        var show_results = ref(false)
+        var ready_quiz = ref(false)
+
+
+        return {
+            questions,
+            questions_answered,
+            answer_index,
+            correct_answers,
+            answers,
+            show_results,
+            ready_quiz,
+            cards
+
+
+        }
+        },
+
+        delimiters: ['/', '/'],
+
+        computed: {
+            progress() {
+                return Math.round(((1) / this.max_questions) * 100);
+            },
+
+            max_questions(){
+                return Object.keys(this.questions).length
+            },
+
+            question_index(){
+
+                if (this.questions_answered >= this.max_questions){
+                    return this.max_questions - 1
+                }
+            
+                return this.questions_answered
+            },
+
+            correct_answer(){
+                let answer = this.questions[this.question_index].answers[this.answer_index]
+                if (answer == undefined)
+                    return -1
+            
+
+                return this.questions[this.question_index].answers.findIndex(answer => answer.correct);
+            }
+        },
+        methods: {
+            choose_answer(index){
+                this.answer_index = index
+                submit_answer()
+            },
+
+            next_question(){
+                this.questions_answered += 1
+                waiting_answer = false
+                
+                if (app.questions_answered == app.max_questions){
+                    this.show_results = true
+                    waiting_answer = true
+                    return
+                }
+
+                this.answer_index = -1
+                
+            }
+        
+        }
+    }).mount('#game')
+
+
+</script>
+
+
+<script>
+
+    var waiting_answer = false
+    function submit_answer(){
+
+
+        if (waiting_answer)
+            return
+
+        if (app.questions_answered == app.max_questions)
+            return
+
+        waiting_answer = true
+
+        app.answers.push(app.answer_index)
+        app.correct_answers.push(app.correct_answer)
+
+        console.log(app.answers)
+
+        delay(1500).then(() => app.next_question());
+
+    }
+
+</script>
+
+<script>
+
+    const cards = {{cards | safe}}
+    
+    // Function to shuffle an array using Fisher-Yates algorithm
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+    
+    // Shuffle the questions array
+    shuffleArray(cards);
+    
+    // Function to create a quiz with one correct answer and three wrong answers
+    function createQuiz(question) {
+      const quiz = {
+        title: question.title,
+        answers: []
+      };
+    
+      // Add the correct answer
+      quiz.answers.push({ text: question.answer, correct: true });
+    
+      // Shuffle the remaining wrong answers
+      var wrongAnswers = cards
+
+      shuffleArray(wrongAnswers)
+
+      wrongAnswers = wrongAnswers.filter(q => q !== question).slice(0, 3);
+    
+      shuffleArray(wrongAnswers);
+    
+      // Add three wrong answers
+      wrongAnswers.forEach(wrongAnswer => {
+        quiz.answers.push({ text: wrongAnswer.answer, correct: false });
+      });
+    
+      // Shuffle the answers
+      shuffleArray(quiz.answers);
+    
+      return quiz;
+    }
+    
+    app.questions = cards.map(createQuiz)
+    
+
+    function delay(time) {
+        return new Promise(resolve => setTimeout(resolve, time));
+    }
+
+    
+</script>
+
+
+{% endblock %}

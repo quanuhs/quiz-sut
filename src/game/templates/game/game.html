@@ -4,29 +4,45 @@
 
 
 <div class="w-full" id="game">
+    <div v-if="!show_results">
+        <div class="w-full bg-blue-500 h-4 mb-4 flex">
+            <div v-for="_answer, _index in correct_answers" class="h-full transition duration-150 ease-in-out" :class="{'bg-green-500': correct_answers[_index] == answers[_index], 'bg-red-500': !(correct_answers[_index] == answers[_index])}" :style="{width: progress+1+'%'}"></div>
+        </div>
 
-    <div class="w-full bg-blue-500 h-4 mb-4 flex">
-        <div v-for="_answer in answers" class="h-full transition duration-150 ease-in-out" :class="{'bg-green-500': _answer, 'bg-red-500': !_answer}" :style="{width: progress+'%'}"></div>
+        <div class="text-center text-6xl font-semibold mb-10">
+            <span id="timer" class="text-green-500"></span>
+        </div>
+
+
+        <div class="bg-white dark:bg-gray-800 p-6 mb-6 shadow-md rounded-lg dark:text-white">
+            <h2 class="text-2xl font-semibold mb-2">Question /question_index+1/:</h2>
+            <p class="text-lg">/questions[question_index].title/</p>
+        </div>
+
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button v-for="title, index in questions[question_index].answers" 
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold p-5 rounded text-center" 
+            :class="{'bg-red-500 hover:bg-red-500': (correct_answer!=index && correct_answer >= 0 && answers[question_index]==index), 'bg-green-500 hover:bg-green-500': correct_answer==index, 'bg-orange-500 hover:bg-orange-500': (answer_index==index && correct_answer == -1)}"            @click="choose_answer(index)">/title/</button>
+        </div>
+    
     </div>
 
-    <div class="text-center text-6xl font-semibold mb-10">
-        <span id="timer" class="text-green-500"></span>
-    </div>
 
-
-    <div class="bg-white dark:bg-gray-800 p-6 mb-6 shadow-md rounded-lg dark:text-white">
-        <h2 class="text-2xl font-semibold mb-2">Question /question_index+1/:</h2>
-        <p class="text-lg">/questions[question_index].title/</p>
-    </div>
-
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button v-for="title, index in questions[question_index].answers" 
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold p-5 rounded text-center" 
-        :class="{'bg-red-500 hover:bg-red-500': (correct_answer!=index && correct_answer >= 0), 'bg-green-500 hover:bg-green-500': correct_answer==index, 'bg-orange-500 hover:bg-orange-500': (answer_index==index && correct_answer == -1)}" @click="choose_answer(index)">/title/</button>
+    <div v-else class="bg-white dark:bg-gray-800 p-6 mb-6 shadow-md rounded-lg dark:text-white">
+        <h2 class="text-2xl font-semibold mb-2">Your answers:</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 text-center items-center justify-center m-2 p-1 gap-3" v-for="_answer, _index in correct_answers">
+            <div class="grid grid-cols-1 mb-2 md:mb-0 mt-2 md:mt-0">
+                <p class="font-bold">/questions[_index].title/</p>
+                <p>/questions[_index].answers[correct_answers[_index]]/</p>
+            </div>
+            <p class="h-full flex items-center justify-center text-center font-bold rounded-lg min-h-[50px] mb-5 md:mb-0" :class="{'bg-green-500': correct_answers[_index] == answers[_index], 'bg-red-500': !(correct_answers[_index] == answers[_index])}">/questions[_index].answers[answers[_index]]/</p>
+        </div>
     </div>
 
 </div>
+
+
 
 
 <style>
@@ -51,19 +67,23 @@
     const app = createApp({
         setup() {
         var questions = ref({{quiz_data | safe}});
-        var answers = ref([])
         
-        var correct_answer = ref(-1)
         var questions_answered = ref({{player.word_index}});
         var answer_index = ref(-1);
+
+        var answers = ref([])
+        var correct_answers = ref([])
+
+        var show_results = ref(false)
 
 
         return {
             questions,
             questions_answered,
             answer_index,
-            correct_answer,
+            correct_answers,
             answers,
+            show_results,
 
 
         }
@@ -87,6 +107,10 @@
                 }
             
                 return this.questions_answered
+            },
+
+            correct_answer(){
+                return this.correct_answers[this.question_index]
             }
         },
         methods: {
@@ -97,8 +121,16 @@
 
             next_question(){
                 this.questions_answered += 1
+
+                
+                if (app.questions_answered == app.max_questions){
+                    this.show_results = true
+                    waiting_answer = true
+                    return
+                }
+
                 this.answer_index = -1
-                this.correct_answer = -1
+                
             }
         
         }
@@ -159,8 +191,22 @@
     }
 
 
+    var waiting_answer = false
     function submit_answer(){
+
+        if (waiting_answer)
+            return
+    
+        
+        waiting_answer = true
+
+        if (app.questions_answered == app.max_questions)
+            return
+
+        app.answers.push(app.answer_index)
+        // console.log(app.answers)
         ws_send("ready", {"question": app.question_index, "answer": app.answer_index})
+        
         
         // if (app.questions_answered < app.max_questions){
         //             app.next_question()
@@ -181,12 +227,13 @@
 </script>
 
     <script>
-        let url = `ws://${window.location.host}/game/player/{{lobby.uuid.hex}}/`
+        let url = `wss://${window.location.host}/game/player/{{player.player_id.hex}}/`
+        
         const gameSocket = new WebSocket(url)
         gameSocket.onmessage = websocketMessageEvent
 
         gameSocket.onclose = (event) => {
-            console.log(event)
+            // console.log(event)
             window.location.reload()
         };
 
@@ -197,14 +244,15 @@
 
         async function websocketMessageEvent(event){
             let data = JSON.parse(event.data)
+            // console.log(data)
             switch(data.command){
                 case 'correct':
-                    app.correct_answer = data["answer"]
-                    app.answers.push(app.answer_index == data["answer"])
+                    app.correct_answers.push(data["answer"])
                     break;
                 
                 case 'next':
                     app.next_question()
+                    waiting_answer = false
                     break;
 
                 default:

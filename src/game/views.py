@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Lobby, LobbyPlayer
+from .models import Lobby, LobbyPlayer, Module
 
 
 def join_game(request):
@@ -16,7 +16,7 @@ def join_game(request):
 
     if request.method == "POST":
 
-        lobby = Lobby.objects.filter(code=request.POST.get("code"), is_open=True, in_play=False).first()
+        lobby = Lobby.objects.filter(code=request.POST.get("code"), is_open=True).first()
 
         if lobby is None:
             error = "Игры с таким кодом не найдено!"
@@ -71,8 +71,9 @@ def lobby_page(request, lobby_id):
         return redirect("join")
 
 
+    # fix later
     if lobby.in_play:
-        quiz_data, correct_data = generate_quiz_data(player.random_seed, lobby.module)
+        quiz_data, correct_data = generate_quiz_data(player.player_id, lobby.module)
         request.session["correct_answers"] = correct_data
         request.session.save()
 
@@ -82,8 +83,6 @@ def lobby_page(request, lobby_id):
 
 
 import random
-
-
 def generate_quiz_data(player_seed, module, num_questions=5, num_answers=4):
     random.seed(player_seed)
 
@@ -143,3 +142,34 @@ def create_game(request, module_id):
 
     else:
         return redirect("login")
+    
+
+
+def solo_quiz(request, module_id):
+    module = Module.objects.filter(id=module_id).first()
+    if module is None:
+        return redirect("/")
+    
+    cards = module.cards.all()
+    cards_data = []
+
+    for card in cards:
+        cards_data.append({"title": card.front_text, "answer": card.back_text})
+
+
+    return render(request, "solo/testing_page.html", {"cards": cards_data, "module": module})
+
+
+def solo_match(request, module_id):
+    module = Module.objects.filter(id=module_id).first()
+    if module is None:
+        return redirect("/")
+    
+    cards = module.cards.all()
+    cards_data = []
+
+    for card in cards:
+        cards_data.append({"title": card.front_text, "answer": card.back_text})
+
+
+    return render(request, "solo/match_page.html", {"cards": cards_data, "module": module})

@@ -8,3 +8,5 @@ lib
 __pycache__
 package-lock.json
 node_modules
+data
+letsencrypt

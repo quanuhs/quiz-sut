@@ -59,7 +59,7 @@
 
 
     <script>
-        let url = `ws://${window.location.host}/game/player/{{lobby.uuid.hex}}/`
+        let url = `wss://${window.location.host}/game/player/{{player.player_id.hex}}/`
         const gameSocket = new WebSocket(url)
         gameSocket.onmessage = websocketMessageEvent
 

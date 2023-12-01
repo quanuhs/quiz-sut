@@ -1,11 +1,56 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+    ::backdrop {
+    background-color:  black;
+    opacity: 0.75;
+}
 
-    <div class="grid md:grid-cols-2" id="lobby">
+
+</style>
+
+<div id="lobby">
+    <dialog id="dialog" class="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div class="max-w-md mx-auto p-6 dark:text-white">
+            <h1 class="text-3xl font-bold dark:text-white mb-8 text-center">Настройки викторины</h1>
+
+            <div>
+                <div class="mb-4">
+                    <label for="penaltyTime" class="block text-sm font-semibold">Время штрафа (сек):</label>
+                    <input type="number" id="penaltyTime" name="penaltyTime" min="0" v-model="lobby_settings.penaltyTime" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label for="repeatQuestion" class="block text-sm font-semibold">Повторять вопросы:</label>
+                    <select id="repeatQuestion" name="repeatQuestion" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <!-- <option value="true">Да</option> -->
+                        <option value="false" selected>Нет</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="thinkTime" class="block text-sm font-semibold">Время на раздумье (сек):</label>
+                    <input type="number" id="thinkTime" name="thinkTime" min="0" v-model="lobby_settings.thinkTime" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label for="placements" class="block text-sm font-semibold ">Количество финишных мест (0-N):</label>
+                    <input type="number" id="placements" name="placements" v-model="lobby_settings.placements" min="0" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                </div>
+
+                <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-700 w-full mb-3" onclick="save_settings()">Применить настройки</button>
+                <button value="cancel" formmethod="dialog" onclick='document.getElementById("dialog").close();' class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-700 w-full" >Закрыть</button>
+            </div>
+        </div>
+    </dialog>
+
+
+
+    <div class="grid md:grid-cols-2">
 
         <div>
             <div class="max-w-md mx-auto py-8 text-center">
-                <p class="text-gray-500 dark:text-gray-400 mb-4">Код для подключения: <br><b class="text-5xl">[[code]]</b></p>
+                <p class="text-gray-500 dark:text-gray-400 mb-4">Код для подключения: <br><b class="text-5xl">/code/</b></p>
 
                 <div class="max-w-sm mx-auto py-8 text-center flex justify-center items-center">
                     <div id="qrcode" class="flex justify-center items-center w-fit p-3 text-center bg-gray-200 rounded-lg"></div>
@@ -31,7 +76,7 @@
                 <figcaption v-for="player, player_id in players" class="flex grow justify-left items-center space-x-3 relative border-2 border-gray-200 rounded-lg p-2 hover:bg-red-500 hover:border-red-700 cursor-pointer" @click="remove_player(player_id)">
                     <img :src="avatars_link+player_id" class="w-16 h-16 rounded-full" alt="profile picture">
                     <div class="space-y-0.5 font-medium dark:text-white text-left">
-                        <div>[[player.name]]</div>
+                        <div>/player.name/</div>
                         <div class="text-sm font-light text-gray-500 dark:text-gray-400">
                             <span v-if="player.is_auth">Авторизованный пользователь</span>
                             <span v-else>Анонимный пользователь</span>
@@ -43,6 +88,7 @@
         </div>
     
     </div>
+</div>
 
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -55,14 +101,17 @@
             var players = ref({})
             var avatars_link = "https://api.dicebear.com/7.x/bottts/svg?seed="
             var code = ref("{{lobby.code}}")
+
+            var lobby_settings = ref({"placements": 5, "thinkTime": 0, "penaltyTime": 0})
             
             return {
                 players,
                 avatars_link,
                 code,
+                lobby_settings,
             }
             },
-            delimiters: ['[[', ']]'],
+            delimiters: ['/', '/'],
 
             methods: {
                 add_player (id, name, auth) {
@@ -101,11 +150,21 @@
         function copy_link(){
             navigator.clipboard.writeText(window.location.host+"{% url 'play' lobby.uuid %}");
         }
+
+        function settings(){
+            document.getElementById("dialog").showModal();
+
+        }
+
+        function save_settings(){
+            gameSocket.send(JSON.stringify({"command": "change_settings", "settings": app.lobby_settings}))
+            document.getElementById("dialog").close();
+        }
     </script>
 
 
     <script>
-        let url = `ws://${window.location.host}/game/admin/{{lobby.secret}}/`
+        let url = `wss://${window.location.host}/game/admin/{{lobby.secret}}/`
         const gameSocket = new WebSocket(url)
         gameSocket.onmessage = websocketMessageEvent
 
@@ -147,5 +206,5 @@
         }
 
     </script>
-    
+
 {% endblock %}

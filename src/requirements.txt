@@ -3,3 +3,4 @@ channels
 daphne
 asgiref
 channels_redis
+psycopg2-binary

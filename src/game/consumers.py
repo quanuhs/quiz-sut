@@ -17,24 +17,39 @@ class GamePlayerConsumer(AsyncJsonWebsocketConsumer):
     async def receive_json(self, content, **kwargs):
         match content.get("command"):
             case "ready":
-                question_index = content.get("message").get("question")
-                answer_index = content.get("message").get("answer")
-
-                if self.player.word_index > question_index:
-                    return
-
-                if self.scope["session"].get("correct_answers")[question_index] == answer_index:
-                    self.player.points += 1
-                
-                self.player.word_index += 1
-                await self.player.asave()
-
-                await self.send_json({"command": "correct", "answer": self.scope["session"].get("correct_answers")[question_index]})
-                # УБРАТЬ!
-                await asyncio.sleep(1.5)
-                await self.send_json({"command": "next"})
+                await self.command_ready(content)
+            
+            case "results":
+                await self.command_results()
     
     
+
+    async def command_results(self):
+        await self.send_json({"command": "results"})
+
+
+    async def command_ready(self, content):
+        question_index = content.get("message").get("question")
+        answer_index = content.get("message").get("answer")
+        is_last = content.get("message").get("last")
+
+        if self.player.word_index > question_index:
+            return
+
+        if self.scope["session"].get("correct_answers")[question_index] == answer_index:
+            self.player.points += 1
+        
+        self.player.word_index += 1
+        await self.player.asave()
+
+        await self.send_json({"command": "correct", "answer": self.scope["session"].get("correct_answers")[question_index]})
+    
+        # УБРАТЬ!
+        await asyncio.sleep(1.5)
+        await self.send_json({"command": "next"})
+
+
+
     
     async def disconnect(self, code):
         if code == 1:
@@ -80,28 +95,22 @@ class GamePlayerConsumer(AsyncJsonWebsocketConsumer):
 
     async def check_code(self, join_code):
         # Получаем информацию о лобби
-        lobby = await Lobby.objects.filter(uuid=join_code).afirst()
-
-        if lobby is None:
-            self.close()
-            return
-
-        self.lobby = lobby
         
-        player_id = self.scope["session"].get("player_id")
+        player = await LobbyPlayer.objects.filter(player_id = join_code).afirst()
 
-        if player_id is None:
-            await self.close()
-            return
-
-        player = await LobbyPlayer.objects.filter(player_id = player_id, lobby = lobby).afirst()
         if player is None:
             await self.close()
             return
         
+        lobby = await Lobby.objects.filter(players__id=player.id).afirst()
+
+        if lobby is None:
+            await self.close()
+            return
+        
         self.player = player
-
-
+        self.lobby = lobby
+        
         await self.accept()
 
         self.room_group_name = f"game_{lobby.id}"
@@ -139,12 +148,15 @@ class GameAdminConsumer(AsyncJsonWebsocketConsumer):
                 await sync_to_async(self.lobby.generate_code)()
                 await self.lobby.asave()
                 await self.send_json({"command": "new_code", "code": self.lobby.code})
+
+            case "change_settings":
+                print(content.get("settings"))
         
     
     
     async def disconnect(self, code):
         await self.channel_layer.group_send(self.room_group_name, {"type": "disconnect", "code": 1})
-        await self.lobby.adelete()
+        # await self.lobby.adelete()
         await self.close()
 
 

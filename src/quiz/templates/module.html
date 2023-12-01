@@ -5,9 +5,9 @@
 
         <div class="flex flex-wrap items-center gap-4 text-center">
             
-            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="{% url 'create' module.id %}">Играть</a>
-            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="">Заучивание</a>
-            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="">Подбор</a>
+            <a class="grow bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded "href="{% url 'create' module.id %}">Викторина</a>
+            <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="{% url 'solo_quiz' module.id%}">Тест</a>
+            <!-- <a class="grow bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded "href="{% url 'solo_match' module.id%}">Подбор</a> -->
 
         </div>
         
@@ -25,7 +25,7 @@
     <div class="bg-white dark:bg-gray-800 p-4 mb-4 shadow-md rounded-lg dark:text-white">
         <figcaption class="flex justify-left items-center space-x-3">
             <a class="flex items-center space-x-3" href="{% url 'author' module.author.id %}">
-            <img class="w-9 h-9 rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/karen-nelson.png" alt="profile picture">
+            <img class="w-9 h-9 rounded-full" src="https://i.imgur.com/3iwYovE.png" alt="profile picture">
             <div class="space-y-0.5 font-medium dark:text-white text-left">
                 <div>{{module.author.username}}</div>
                 <div class="text-sm font-light text-gray-500 dark:text-gray-400">Создатель модуля</div>

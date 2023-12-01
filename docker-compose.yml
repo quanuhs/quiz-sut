@@ -7,8 +7,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_SECRET_KEY=your_secret_key
-      - DEBUG=False
+      - DJANGO_SECRET_KEY=thisisasecretkeyadada123123adgf
+      - DEBUG=True
+      - POSTGRES=True
+
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
     depends_on:
       - db
 
@@ -19,9 +26,20 @@ services:
     expose:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=quiz_db
-      - POSTGRES_PASSWORD=quiz_user
-      - POSTGRES_DB=your_password
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+
+  nginx:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
 
 volumes:
   postgres_data:
